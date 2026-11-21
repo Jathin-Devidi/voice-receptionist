@@ -1,0 +1,12 @@
+livekit-agents
+livekit-plugins-groq
+livekit-plugins-openai
+livekit-plugins-silero
+livekit-plugins-turn-detector
+asyncpg
+fastapi
+uvicorn
+python-dotenv
+tzdata
+pytest
+pytest-asyncio

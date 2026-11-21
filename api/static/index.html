@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sunrise Salon - Call</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 480px; margin: 8vh auto; padding: 0 16px; text-align: center; }
+  button { font-size: 1.2rem; padding: 14px 32px; border: 0; border-radius: 999px; background: #16a34a; color: #fff; cursor: pointer; }
+  button.end { background: #dc2626; }
+  #status { margin: 16px 0; color: #555; }
+  #log { text-align: left; font-size: .95rem; }
+  #log p { margin: 6px 0; }
+</style>
+</head>
+<body>
+  <h1>Sunrise Salon</h1>
+  <p>Talk to our voice receptionist.</p>
+  <button id="btn">Call</button>
+  <div id="status">Not connected</div>
+  <div id="log"></div>
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.0/dist/livekit-client.umd.min.js"></script>
+<script>
+const btn = document.getElementById("btn"), statusEl = document.getElementById("status"), log = document.getElementById("log");
+let room = null;
+
+async function start() {
+  btn.disabled = true; statusEl.textContent = "Connecting...";
+  try {
+    const { token, url } = await (await fetch("/token")).json();
+    room = new LivekitClient.Room();
+    room.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {
+      if (track.kind === "audio") document.body.appendChild(track.attach());
+    });
+    room.on(LivekitClient.RoomEvent.Disconnected, stop);
+    try {
+      room.registerTextStreamHandler("lk.transcription", async (reader, info) => {
+        const text = await reader.readAll();
+        const mine = info.identity === room.localParticipant.identity;
+        const p = document.createElement("p");
+        p.textContent = (mine ? "You: " : "Agent: ") + text;
+        log.appendChild(p);
+      });
+    } catch (e) { /* transcript is optional */ }
+    await room.connect(url, token);
+    await room.localParticipant.setMicrophoneEnabled(true);
+    statusEl.textContent = "Connected. Start talking.";
+    btn.textContent = "End call"; btn.className = "end"; btn.disabled = false;
+  } catch (e) {
+    statusEl.textContent = "Could not connect: " + e.message;
+    btn.disabled = false;
+  }
+}
+
+function stop() {
+  if (room) { room.disconnect(); room = null; }
+  btn.textContent = "Call"; btn.className = ""; btn.disabled = false;
+  statusEl.textContent = "Call ended";
+}
+
+btn.onclick = () => (room ? stop() : start());
+</script>
+</body>
+</html>
