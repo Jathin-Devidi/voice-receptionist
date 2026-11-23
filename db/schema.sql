@@ -23,7 +23,8 @@ CREATE TABLE services (
   stylist_id UUID NOT NULL REFERENCES stylists(id),
   name TEXT NOT NULL,
   price_inr INT,
-  price_note TEXT          -- e.g. 'From Rs 2,500, depends on hair length'
+  price_note TEXT,         -- e.g. 'From Rs 2,500, depends on hair length'
+  active BOOLEAN NOT NULL DEFAULT TRUE  -- false = retired (hidden from callers, kept for history)
 );
 
 CREATE TABLE working_hours (

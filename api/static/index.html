@@ -2,60 +2,291 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#fff1de">
 <title>Sunrise Salon - Call</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 480px; margin: 8vh auto; padding: 0 16px; text-align: center; }
-  button { font-size: 1.2rem; padding: 14px 32px; border: 0; border-radius: 999px; background: #16a34a; color: #fff; cursor: pointer; }
-  button.end { background: #dc2626; }
-  #status { margin: 16px 0; color: #555; }
-  #log { text-align: left; font-size: .95rem; }
-  #log p { margin: 6px 0; }
+  :root {
+    --bg1: #fff7ec; --bg2: #ffe0b8;
+    --card: #fffaf3; --line: #f0d8ba;
+    --ink: #3b2418; --muted: #8a6a55;
+    --accent: #c2410c; --accent2: #ea580c; --amber: #f59e0b; --danger: #9b1c1c;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; display: flex; justify-content: center;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink);
+    background:
+      radial-gradient(900px 500px at 50% -8%, rgba(255,255,255,.9), transparent 62%),
+      linear-gradient(180deg, var(--bg1), var(--bg2));
+  }
+  .card {
+    width: 100%; max-width: 440px; min-height: 100dvh;
+    display: flex; flex-direction: column; text-align: center;
+    padding: calc(26px + env(safe-area-inset-top)) 22px calc(22px + env(safe-area-inset-bottom));
+  }
+  @media (min-width: 560px) {
+    body { align-items: center; }
+    .card {
+      min-height: 0; height: min(800px, 94dvh); padding-top: 30px;
+      background: var(--card); border: 1px solid var(--line); border-radius: 32px;
+      box-shadow: 0 30px 60px -20px rgba(150, 70, 20, .35);
+    }
+  }
+
+  header .eyebrow { margin: 0 0 6px; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  header h1 { margin: 0; font: 600 1.7rem/1.15 ui-serif, Georgia, "Times New Roman", serif; }
+  header .sub { margin: 8px auto 0; max-width: 32ch; font-size: .95rem; line-height: 1.4; color: var(--muted); }
+
+  .stage { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 14px 0 6px; }
+
+  .avatar { position: relative; width: clamp(150px, 48vw, 210px); aspect-ratio: 1; }
+  .avatar img { position: relative; width: 100%; height: 100%; display: block; border-radius: 50%; object-fit: cover; object-position: center 22%; box-shadow: 0 14px 30px -10px rgba(194, 65, 12, .45); }
+  .avatar img[hidden] { display: none; }
+  .badge { position: absolute; z-index: 2; left: 50%; bottom: -8px; transform: translateX(-50%); padding: 4px 12px; border-radius: 999px; background: var(--ink); color: #fff; font-size: .72rem; letter-spacing: .04em; white-space: nowrap; box-shadow: 0 6px 14px -6px rgba(59, 36, 24, .6); }
+  .avatar svg { position: relative; width: 100%; height: 100%; display: block; border-radius: 50%; box-shadow: 0 14px 30px -10px rgba(194, 65, 12, .45); }
+  .avatar::before, .avatar::after { content: ""; position: absolute; inset: -9px; border-radius: 50%; border: 3px solid var(--amber); opacity: 0; }
+  [data-state="live"] .avatar::before { opacity: .45; }
+  [data-state="speaking"] .avatar::before { animation: ring 1.3s ease-out infinite; }
+  [data-state="speaking"] .avatar::after { animation: ring 1.3s ease-out .65s infinite; }
+  [data-state="listening"] .avatar::before { border-color: var(--accent2); opacity: .55; animation: breathe 2.2s ease-in-out infinite; }
+  [data-state="connecting"] .avatar::before { opacity: .5; animation: breathe 1s ease-in-out infinite; }
+  @keyframes ring { 0% { transform: scale(1); opacity: .75; } 100% { transform: scale(1.22); opacity: 0; } }
+  @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 9px; padding: 8px 16px; min-height: 38px;
+    background: #fff; border: 1px solid var(--line); border-radius: 999px; font-size: .95rem; color: var(--ink);
+    box-shadow: 0 4px 12px -6px rgba(150, 70, 20, .35);
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--amber); flex: none; }
+  [data-state="live"] .dot, [data-state="listening"] .dot { background: #16a34a; }
+  [data-state="speaking"] .dot { display: none; }
+  [data-state="error"] .dot { background: var(--danger); }
+  .bars { display: none; align-items: center; gap: 2px; height: 14px; }
+  [data-state="speaking"] .bars { display: inline-flex; }
+  .bars i { width: 3px; height: 100%; border-radius: 2px; background: var(--accent2); animation: bar .9s ease-in-out infinite; transform-origin: center; }
+  .bars i:nth-child(2) { animation-delay: .15s; } .bars i:nth-child(3) { animation-delay: .3s; } .bars i:nth-child(4) { animation-delay: .45s; }
+  @keyframes bar { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+
+  .timer { height: 1em; font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; visibility: hidden; }
+  .timer.on { visibility: visible; }
+
+  .log { width: 100%; max-height: 24vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 2px 2px 0; scrollbar-width: thin; }
+  .log[hidden] { display: none; }
+  .bubble { max-width: 86%; padding: 8px 12px; border-radius: 16px; font-size: .92rem; line-height: 1.35; text-align: left; overflow-wrap: anywhere; }
+  .bubble.agent { align-self: flex-start; background: #fff; border: 1px solid var(--line); border-bottom-left-radius: 5px; }
+  .bubble.you { align-self: flex-end; background: #ffe6c7; border: 1px solid #f6cf9f; border-bottom-right-radius: 5px; }
+
+  footer { display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 8px; }
+  .call {
+    width: 100%; max-width: 340px; height: 60px; border: 0; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    font: 600 1.1rem/1 inherit; color: #fff;
+    background: linear-gradient(180deg, var(--accent2), var(--accent));
+    box-shadow: 0 12px 24px -8px rgba(194, 65, 12, .55), inset 0 1px 0 rgba(255, 255, 255, .28);
+    transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+  }
+  .call:hover { transform: translateY(-1px); filter: brightness(1.05); }
+  .call:active { transform: translateY(1px); }
+  .call:focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; }
+  .call:disabled { opacity: .65; cursor: default; transform: none; filter: none; }
+  .call.end { background: linear-gradient(180deg, #b42323, var(--danger)); box-shadow: 0 12px 24px -8px rgba(155, 28, 28, .55), inset 0 1px 0 rgba(255, 255, 255, .22); }
+  .call svg { width: 22px; height: 22px; fill: currentColor; }
+  .call.end svg { transform: rotate(135deg); }
+  .hint { margin: 0; font-size: .82rem; line-height: 1.35; color: var(--muted); max-width: 34ch; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .avatar::before, .avatar::after, .bars i { animation: none !important; }
+    [data-state="speaking"] .avatar::before { opacity: .7; }
+  }
 </style>
 </head>
 <body>
-  <h1>Sunrise Salon</h1>
-  <p>Talk to our voice receptionist.</p>
-  <button id="btn">Call</button>
-  <div id="status">Not connected</div>
-  <div id="log"></div>
+<main class="card" id="stage" data-state="idle">
+  <header>
+    <p class="eyebrow">Sunrise Salon &middot; Indiranagar, Bengaluru</p>
+    <h1>Talk to our receptionist</h1>
+    <p class="sub">Book, move or cancel an appointment, or ask about hours and prices.</p>
+  </header>
+
+  <section class="stage" aria-label="Call">
+    <div class="avatar">
+      <img id="photo" alt="The Sunrise Salon receptionist" hidden>
+      <svg id="art" viewBox="0 0 240 240" role="img" aria-label="Illustration of a friendly male receptionist in a headset, with a rising sun behind him">
+<defs>
+  <radialGradient id="bg" cx="50%" cy="60%" r="70%"><stop offset="0" stop-color="#ffe2a8"/><stop offset="1" stop-color="#f6a86a"/></radialGradient>
+  <linearGradient id="blazer" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9531e"/><stop offset="1" stop-color="#a8340d"/></linearGradient>
+  <linearGradient id="hair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34201a"/><stop offset="1" stop-color="#1c110c"/></linearGradient>
+  <clipPath id="clip"><circle cx="120" cy="120" r="116"/></clipPath>
+</defs>
+<circle cx="120" cy="120" r="116" fill="url(#bg)"/>
+<g clip-path="url(#clip)">
+  <g stroke="#fff4d8" stroke-width="5" stroke-linecap="round" opacity=".7">
+    <line x1="120" y1="150" x2="120" y2="8"/><line x1="120" y1="150" x2="52" y2="24"/><line x1="120" y1="150" x2="188" y2="24"/>
+    <line x1="120" y1="150" x2="10" y2="86"/><line x1="120" y1="150" x2="230" y2="86"/>
+  </g>
+  <circle cx="120" cy="150" r="74" fill="#ffd86e" opacity=".85"/>
+  <path d="M4 252 C10 198 62 180 120 180 C178 180 230 198 236 252 Z" fill="url(#blazer)"/>
+  <path d="M98 178 L120 216 L142 178 Z" fill="#fff1dc"/>
+  <path d="M96 176 L76 206 L106 224 L120 198 Z" fill="#8f2b0a"/>
+  <path d="M144 176 L164 206 L134 224 L120 198 Z" fill="#8f2b0a"/>
+  <path d="M98 144 L142 144 L144 186 Q120 202 96 186 Z" fill="#b97a4c"/>
+  <ellipse cx="77" cy="116" rx="7" ry="11" fill="#c4885a"/><ellipse cx="163" cy="116" rx="7" ry="11" fill="#c4885a"/>
+  <path d="M78 100 C78 68 98 56 120 56 C142 56 162 68 162 100 L162 120 C162 148 144 166 120 166 C96 166 78 148 78 120 Z" fill="#d39b69"/>
+  <path d="M80 118 C82 150 98 168 120 168 C142 168 158 150 160 118 C156 134 146 142 134 144 C126 140 114 140 106 144 C94 142 84 134 80 118 Z" fill="#3a2418" opacity=".55"/>
+  <path d="M74 102 C66 58 98 38 126 42 C154 46 174 66 166 102 C162 84 152 74 138 70 C122 78 96 78 84 92 C80 96 76 98 74 102 Z" fill="url(#hair)"/>
+  <path d="M93 100 Q104 93 115 98" stroke="#2a1710" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M125 98 Q136 93 147 100" stroke="#2a1710" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <ellipse cx="104" cy="112" rx="4.3" ry="5.2" fill="#2a1710"/><ellipse cx="136" cy="112" rx="4.3" ry="5.2" fill="#2a1710"/>
+  <circle cx="105.5" cy="110" r="1.4" fill="#fff"/><circle cx="137.5" cy="110" r="1.4" fill="#fff"/>
+  <path d="M117 116 Q114 126 120 128 Q126 126 123 116" stroke="#b27447" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M106 133 Q120 128 134 133 Q120 136 106 133 Z" fill="#2a1710"/>
+  <path d="M104 140 Q120 158 136 140 Q120 146 104 140 Z" fill="#fff" stroke="#6b2414" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M71 106 C68 56 98 36 122 36 C146 36 174 56 170 106" stroke="#2d2a2e" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+  <rect x="60" y="98" width="16" height="30" rx="8" fill="#2d2a2e"/><rect x="164" y="98" width="16" height="30" rx="8" fill="#2d2a2e"/>
+  <rect x="64.5" y="104" width="5.5" height="17" rx="2.7" fill="#f59e0b"/><rect x="170" y="104" width="5.5" height="17" rx="2.7" fill="#f59e0b"/>
+  <path d="M172 126 C174 160 158 170 140 160" stroke="#2d2a2e" stroke-width="3.8" fill="none" stroke-linecap="round"/>
+  <circle cx="136" cy="159" r="5.2" fill="#f59e0b"/>
+</g>
+      </svg>
+      <span class="badge">AI voice receptionist</span>
+    </div>
+
+    <div class="pill" role="status" aria-live="polite">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span id="status">Ready when you are</span>
+    </div>
+    <div class="timer" id="timer" aria-hidden="true">00:00</div>
+
+    <div class="log" id="log" hidden aria-label="Conversation"></div>
+  </section>
+
+  <footer>
+    <button class="call" id="btn" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1C10.61 21 3 13.39 3 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z"/></svg>
+      <span id="btnLabel">Call</span>
+    </button>
+    <p class="hint">Allow the microphone when asked. Headphones work best, so the receptionist does not hear itself.</p>
+  </footer>
+</main>
+
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.0/dist/livekit-client.umd.min.js"></script>
 <script>
-const btn = document.getElementById("btn"), statusEl = document.getElementById("status"), log = document.getElementById("log");
-let room = null;
+const $ = (id) => document.getElementById(id);
+const stage = $("stage"), btn = $("btn"), btnLabel = $("btnLabel"), statusEl = $("status"),
+      logEl = $("log"), timerEl = $("timer");
+const photo = $("photo"), art = $("art");
+let room = null, timerId = null, startedAt = 0;
+const segments = new Map();
+
+// Use a real photo if one has been added to api/static (receptionist.jpg/.png/.webp); otherwise keep the illustration.
+(function loadPhoto() {
+  const sources = ["/static/receptionist.jpg", "/static/receptionist.jpeg", "/static/receptionist.png", "/static/receptionist.webp"];
+  (function next(i) {
+    if (i >= sources.length) return;
+    const probe = new Image();
+    probe.onload = () => { photo.src = sources[i]; photo.hidden = false; art.style.display = "none"; };
+    probe.onerror = () => next(i + 1);
+    probe.src = sources[i];
+  })(0);
+})();
+
+const TEXT = {
+  idle: "Ready when you are",
+  connecting: "Connecting...",
+  live: "Connected. Say hello!",
+  speaking: "Receptionist is speaking",
+  listening: "Listening to you...",
+  ended: "Call ended. You can call again.",
+};
+
+function setState(state, message) {
+  stage.dataset.state = state;
+  statusEl.textContent = message || TEXT[state] || "";
+}
+
+function tick() {
+  const s = Math.floor((Date.now() - startedAt) / 1000);
+  timerEl.textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}
+function startTimer() { startedAt = Date.now(); tick(); timerEl.classList.add("on"); timerId = setInterval(tick, 1000); }
+function stopTimer() { clearInterval(timerId); timerId = null; timerEl.classList.remove("on"); }
+
+function addLine(who, text, segmentId) {
+  if (!text || !text.trim()) return;
+  let el = segmentId ? segments.get(segmentId) : null;
+  if (!el) {
+    el = document.createElement("div");
+    el.className = "bubble " + who;
+    logEl.appendChild(el);
+    if (segmentId) segments.set(segmentId, el);
+  }
+  el.textContent = text;
+  logEl.hidden = false;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function friendlyError(e) {
+  if (e && (e.name === "NotAllowedError" || /permission|denied/i.test(e.message || "")))
+    return "Microphone is blocked. Allow it in your browser, then try again.";
+  if (e && e.name === "NotFoundError") return "No microphone found on this device.";
+  return "Could not connect: " + ((e && e.message) || "unknown error");
+}
 
 async function start() {
-  btn.disabled = true; statusEl.textContent = "Connecting...";
+  btn.disabled = true;
+  logEl.innerHTML = ""; logEl.hidden = true; segments.clear();
+  setState("connecting");
   try {
-    const { token, url } = await (await fetch("/token")).json();
-    room = new LivekitClient.Room();
+    const res = await fetch("/token");
+    if (!res.ok) throw new Error("server error " + res.status);
+    const { token, url } = await res.json();
+
+    room = new LivekitClient.Room({ audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true } });
     room.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {
       if (track.kind === "audio") document.body.appendChild(track.attach());
     });
-    room.on(LivekitClient.RoomEvent.Disconnected, stop);
+    room.on(LivekitClient.RoomEvent.ActiveSpeakersChanged, (speakers) => {
+      if (!room) return;
+      if (speakers.some((s) => !s.isLocal)) setState("speaking");
+      else if (speakers.some((s) => s.isLocal)) setState("listening");
+      else setState("live");
+    });
+    room.on(LivekitClient.RoomEvent.Disconnected, () => stop());
     try {
-      room.registerTextStreamHandler("lk.transcription", async (reader, info) => {
+      room.registerTextStreamHandler("lk.transcription", async (reader, participantInfo) => {
         const text = await reader.readAll();
-        const mine = info.identity === room.localParticipant.identity;
-        const p = document.createElement("p");
-        p.textContent = (mine ? "You: " : "Agent: ") + text;
-        log.appendChild(p);
+        const attrs = (reader.info && reader.info.attributes) || {};
+        const mine = participantInfo.identity === room.localParticipant.identity;
+        addLine(mine ? "you" : "agent", text, attrs["lk.segment_id"]);
       });
-    } catch (e) { /* transcript is optional */ }
+    } catch (e) { /* the live transcript is optional */ }
+
     await room.connect(url, token);
     await room.localParticipant.setMicrophoneEnabled(true);
-    statusEl.textContent = "Connected. Start talking.";
-    btn.textContent = "End call"; btn.className = "end"; btn.disabled = false;
+    try { await room.startAudio(); } catch (e) { /* audio starts on the first click anyway */ }
+
+    setState("live");
+    startTimer();
+    btnLabel.textContent = "End call"; btn.classList.add("end"); btn.disabled = false;
   } catch (e) {
-    statusEl.textContent = "Could not connect: " + e.message;
-    btn.disabled = false;
+    const r = room; room = null;
+    if (r) r.disconnect();
+    stopTimer();
+    setState("error", friendlyError(e));
+    btnLabel.textContent = "Call"; btn.classList.remove("end"); btn.disabled = false;
   }
 }
 
 function stop() {
-  if (room) { room.disconnect(); room = null; }
-  btn.textContent = "Call"; btn.className = ""; btn.disabled = false;
-  statusEl.textContent = "Call ended";
+  const r = room; room = null;
+  if (r) r.disconnect();
+  stopTimer();
+  btnLabel.textContent = "Call"; btn.classList.remove("end"); btn.disabled = false;
+  if (stage.dataset.state !== "error") setState("ended");
 }
 
 btn.onclick = () => (room ? stop() : start());

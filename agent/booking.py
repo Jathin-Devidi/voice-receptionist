@@ -1,4 +1,4 @@
-﻿"""Booking logic. All business facts come from the database.
+"""Booking logic. All business facts come from the database.
 
 Double-booking is prevented by the partial unique index `one_booking_per_slot`
 in schema.sql. The code below only validates the request and handles the
@@ -17,7 +17,8 @@ DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sun
 
 
 def _tokens(s: str) -> set[str]:
-    s = re.sub(r"'s\b", "", s.lower()).replace("color", "colour")
+    s = s.lower().replace("color", "colour")  # callers (and speech-to-text) use both spellings
+    s = re.sub(r"'s\b", "", s)
     return set(re.sub(r"[^a-z0-9]+", " ", s).split())
 
 
@@ -62,7 +63,7 @@ class Booker:
         rows = await conn.fetch(
             """select s.id, s.name, s.price_inr, s.price_note, s.stylist_id, st.name as stylist
                from services s join stylists st on st.id = s.stylist_id
-               where s.business_id = $1""", self.business_id)
+               where s.business_id = $1 and s.active""", self.business_id)
         q = _tokens(term)
         exact = [r for r in rows if r["name"].lower() == term.lower()]
         if exact:
@@ -134,7 +135,7 @@ class Booker:
             services = await c.fetch(
                 """select s.name, s.price_inr, s.price_note, st.name as stylist
                    from services s join stylists st on st.id=s.stylist_id
-                   where s.business_id=$1 order by st.name, s.name""", self.business_id)
+                   where s.business_id=$1 and s.active order by st.name, s.name""", self.business_id)
             faqs = await c.fetch("select topic, answer from faqs where business_id=$1", self.business_id)
         hours: dict = {}
         for r in stylists:

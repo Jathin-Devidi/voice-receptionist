@@ -1,0 +1,12 @@
+.env
+.git
+.venv
+.vscode
+__pycache__
+*.pyc
+.pytest_cache
+logs
+tests
+docs
+test.mp3
+latency.csv

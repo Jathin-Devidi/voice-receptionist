@@ -1,7 +1,7 @@
+"""Must-pass: ten callers fire at the same slot at the same moment; exactly one wins."""
 import asyncio
 from datetime import datetime, timedelta
 
-import pytest
 from dotenv import load_dotenv
 
 from agent.booking import Booker
